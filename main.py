@@ -5,7 +5,9 @@ import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 
-from utils import prepare_data_loaders, calculate_maximum_mutual_information_by_labels, calculate_table_memory_capacity
+from utils import (prepare_data_loaders, data_in_table,
+                     get_information_per_column, get_mutual_information, unpack_dataset,
+                     memory_equivalent_capacity_of_table)
 from model import OurCNN
 
 def train_model(cifar_data_loaders, transform, num_epochs=1, name="my_model"):
@@ -39,26 +41,35 @@ def train_model(cifar_data_loaders, transform, num_epochs=1, name="my_model"):
     # Evaluate the model on the test set
     trainer.test(my_model, cifar_data_loaders["test_data"])
 
-def evaluate_data(cifar_data_sets):
+def evaluate_data(data, labels):
     """
     Code for doing some evaluation on the data
     """
 
-    # Calculate the maximum mutual information between the labels and the data
-    max_mutual_info = calculate_maximum_mutual_information_by_labels(cifar_data_sets["train_data"])
-    print(f"Maximum mutual information between labels and data: {max_mutual_info}")
-
     # Calculate the memory capacity of the dataset
-    memory_capacity = calculate_table_memory_capacity(cifar_data_sets["train_data"])
-    print(f"Memory capacity of the dataset as lookup-table: {memory_capacity} bits")
+    data_capacity = data_in_table(data)
+    print(f"Amount of data in the dataset: {data_capacity} bits")
+
+    # Memory Eqviavlent Capacity of table
+    memory_equivalent_capacity = memory_equivalent_capacity_of_table(labels, 10)
+    print(f"Memory Equivalent Capacity of table as lookup-table: {memory_equivalent_capacity} bits")
+
+    # Calculate the maximum mutual information between the labels and the data
+    label_info = get_information_per_column(labels).item() * data.shape[0]
+    print(f"Maximum mutual information between labels and data: {label_info:.4f} bits")
+
+    # Calculate the mutual information between the labels and the data
+    mutual_info = get_mutual_information(data, labels) * data.shape[0]
+    print(f"Minimum mutual information between labels and data: {mutual_info.min():.4f} bits")
     
 
 if __name__ == "__main__":
 
     cifar_data_loaders, cifar_data_sets, transform = prepare_data_loaders()
 
+    data, labels = unpack_dataset(cifar_data_sets["train_data"])
     # Do some evaluation on the data
-    evaluate_data(cifar_data_sets=cifar_data_sets)
+    evaluate_data(data, labels)
 
     # Train a model
-    train_model(cifar_data_loaders=cifar_data_loaders, transform=transform, num_epochs=10, name="my_model")
+    #train_model(cifar_data_loaders=cifar_data_loaders, transform=transform, num_epochs=10, name="my_model")

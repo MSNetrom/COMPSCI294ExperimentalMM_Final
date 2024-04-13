@@ -1,6 +1,8 @@
+import math
 import torch
 from torchvision import datasets, transforms
 from torch.utils.data import Dataset, DataLoader
+from tqdm import tqdm
 
 from typing import Tuple, Dict
 
@@ -44,29 +46,51 @@ def prepare_data_loaders(batch_size=50, num_workers=4) -> Tuple[Dict[str, DataLo
 
     return cifar_data_loaders, cifar_data_sets, transform
 
-def calculate_maximum_mutual_information_by_labels(dataset: Dataset) -> float:
 
-    """
-    Looking at labels to find the maximum possible mutual information between the labels and the data.
-    """
+def data_in_table(data: torch.Tensor, capacity_per_entry: int = 8) -> float:
+    return data.shape[0]*data.shape[1]*capacity_per_entry
 
+def memory_equivalent_capacity_of_table(labels: torch.Tensor, classes: int) -> float:
+    return labels.shape[0] * math.log2(classes)
+
+def unpack_dataset(dataset: Dataset) -> Tuple[torch.Tensor, torch.Tensor]:
+    data = torch.stack([data for data, _ in dataset]).flatten(start_dim=1)
     labels = torch.Tensor([label for _, label in dataset])
+    return data, labels
 
-    label_counts = torch.unique(labels, return_counts=True)[1]
-    probabilities = label_counts / labels.shape[0]
-    entropy = -torch.sum(probabilities * torch.log2(probabilities)).item()
+def get_information_per_column(data: torch.Tensor) -> torch.Tensor:
 
-    return entropy
+    if len(data.shape) == 1:
+        data = data.unsqueeze(1)
 
+    # Calculate the entropy for each column
+    entropies = []
+    for i in range(data.size(1)):  # Iterate over columns instead of rows
+        column = data[:, i]  # Extract the ith column
+        _, counts = torch.unique(column, return_counts=True)
+        probabilities = counts / column.shape[0]
+        entropy = -torch.sum(probabilities * torch.log2(probabilities))
+        entropies.append(entropy.item())
+    
+    # Convert to a tensor for the entire dataset
+    entropies_tensor = torch.tensor(entropies)
+    
+    return entropies_tensor
 
-def calculate_table_memory_capacity(dataset: Dataset, capacity_per_entry: int = 8) -> float:
-    data = torch.stack([data for data, _ in dataset])
-    return data.shape[0]*data.shape[1]*data.shape[2]*capacity_per_entry
+def get_mutual_information(data: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
 
-"""
-print("Entropy per row:", entropy, "Total entropy:", entropy*mnist_labels.shape[0])
-print("Memory capacity of a corresponding table:", eq_memory_cap, "bits")
-print("Suggested maximum compression rate:", eq_memory_cap/(entropy*mnist_labels.shape[0]))
-"""
+    # Calculate the entropy of the datarows, and labels
+    information_labels = get_information_per_column(labels)
+    information_per_feature = get_information_per_column(data)
+
+    # Calculate the joint entropy
+    information_joint = torch.zeros(data.size(1))
+    for i in tqdm(range(data.size(1)), desc="Calculating joint entropies"):
+        column = data[:, i]
+        joint_column = torch.hstack((column.unsqueeze(1), labels.unsqueeze(1))).unsqueeze(1)
+        information_joint[i] = get_information_per_column(joint_column)[0]
+
+    # Calculate the mutual information
+    return information_per_feature + information_labels - information_joint
 
     
