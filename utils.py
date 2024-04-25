@@ -1,8 +1,9 @@
 import math
 import torch
 from torchvision import datasets, transforms
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, random_split
 from tqdm import tqdm
+import numpy as np
 
 from typing import Tuple, Dict
 
@@ -14,37 +15,48 @@ def load_cifar10() -> Tuple[Dataset, Dataset]:
 
     return cifar_train_dataset, cifar_test_dataset
 
-def prepare_data_loaders(batch_size=50, num_workers=4) -> Tuple[Dict[str, DataLoader], Dict[str, Dataset], transforms.Normalize]:
+def prepare_data_loaders(data: torch.Tensor, labels: torch.Tensor, train_perc: int, test_perc: int, batch_size=50, num_workers=4) -> Tuple[Dict[str, DataLoader], Dict[str, Dataset], transforms.Normalize]:
 
-    # Prepare dataset
-    cifar_train_dataset, cifar_test_dataset = load_cifar10()
+    #print("Data shape: ", data.shape, "Data dtype: ", data.dtype)
+    data = data.float()
+
+    # Create a dataset
+    data_set = torch.utils.data.TensorDataset(data, labels)
+
+    # Split into validation and test sets
+    train_size = int(train_perc * len(data))
+    test_size = int(test_perc * len(data))
+    val_size = len(data) - train_size - test_size
+
+    # Split the data
+    train_dataset, val_dataset, test_dataset = random_split(data_set, [train_size, val_size, test_size])
 
     # Create a normalizer for better training
-    d_mean = cifar_train_dataset.data.mean(axis=(0,1,2)) / 255
-    d_std = cifar_train_dataset.data.std(axis=(0,1,2)) / 255
+    d_unpack = torch.vstack([my_data for my_data, _ in train_dataset])
+    d_unpack = d_unpack.reshape(d_unpack.shape[0], -1, d_unpack.shape[-2], d_unpack.shape[-1])
+    print("Data shape: ", d_unpack.shape)
+    d_mean = d_unpack.mean(axis=(0,2,3))
+    d_std = d_unpack.std(axis=(0,2,3))
     normalizer = transforms.Normalize(mean=d_mean, std=d_std)
 
+    print("Mean: ", d_mean, "Std: ", d_std)
+
     transform = transforms.Compose([
-        transforms.ConvertImageDtype(torch.float),
+        #transforms.ConvertImageDtype(torch.float),
         normalizer
     ])
 
-    # Split into validation and test sets
-    train_size = int(0.8 * len(cifar_train_dataset))  # 80% for training
-    val_size = len(cifar_train_dataset) - train_size   # 20% for validation
-    cifar_train_dataset, cifar_val_dataset = torch.utils.data.random_split(cifar_train_dataset, [train_size, val_size])
-
     # Save datasets for later
-    cifar_data_sets = {"train_data": cifar_train_dataset, "val_data": cifar_val_dataset, "test_data": cifar_test_dataset}
+    data_sets = {"train_data": train_dataset, "val_data": val_dataset, "test_data": test_dataset}
 
     # Create data loaders
-    cifar_data_loaders = {}
-    cifar_data_loaders["train_data"] = torch.utils.data.DataLoader(cifar_train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    cifar_data_loaders["val_data"] = torch.utils.data.DataLoader(cifar_val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-    cifar_data_loaders["val_train_data"] = torch.utils.data.DataLoader(cifar_train_dataset, batch_size=len(cifar_train_dataset), shuffle=False, num_workers=num_workers)
-    cifar_data_loaders["test_data"] = torch.utils.data.DataLoader(cifar_test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    data_loaders = {}
+    data_loaders["train_data"] = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    data_loaders["val_data"] = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    data_loaders["val_train_data"] = torch.utils.data.DataLoader(train_dataset, batch_size=len(train_dataset), shuffle=False, num_workers=num_workers)
+    data_loaders["test_data"] = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
-    return cifar_data_loaders, cifar_data_sets, transform
+    return data_loaders, data_sets, transform
 
 
 def data_in_table(data: torch.Tensor, capacity_per_entry: int = 8) -> float:

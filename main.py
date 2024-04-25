@@ -4,13 +4,14 @@ import torch.utils
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
+import chinese_mnist_loader
 
 from utils import (prepare_data_loaders, data_in_table,
                      get_information_per_column, get_mutual_information, unpack_dataset,
                      memory_equivalent_capacity_of_table)
-from model import OurCNN, MECCNN, HighDimMECCNN
+from model import OurCNN, MECCNN, HighDimMECCNN, ChineseCNN
 
-def train_model(model: torch.nn.Module, cifar_data_loaders, num_epochs=1, name="my_model"):
+def train_model(model: torch.nn.Module, data_loaders, num_epochs=1, name="my_model"):
     """
     Code for actually training a model
     """
@@ -34,10 +35,10 @@ def train_model(model: torch.nn.Module, cifar_data_loaders, num_epochs=1, name="
     )
 
     # Train the model
-    trainer.fit(model, cifar_data_loaders["train_data"], [cifar_data_loaders["val_data"], cifar_data_loaders["val_train_data"]])
+    trainer.fit(model, data_loaders["train_data"], [data_loaders["val_data"], data_loaders["val_train_data"]])
 
     # Evaluate the model on the test set
-    trainer.test(model, cifar_data_loaders["test_data"])
+    trainer.test(model, data_loaders["test_data"])
 
 def evaluate_data(data: torch.Tensor, labels: torch.Tensor):
     """
@@ -68,12 +69,18 @@ def evaluate_data(data: torch.Tensor, labels: torch.Tensor):
 
 if __name__ == "__main__":
 
-    cifar_data_loaders, cifar_data_sets, transform = prepare_data_loaders(batch_size=1024)
+    # Load the data
+    data, labels = chinese_mnist_loader.load_chinese_mnist()
 
+    data_loaders, data_sets, transform = prepare_data_loaders(data, labels, train_perc=0.333, test_perc=0.333, batch_size=50, num_workers=4)
+
+
+    model = ChineseCNN(preparer=transform)
+    train_model(model=model, data_loaders=data_loaders, num_epochs=10000, name="ChineseCNN")
     #data, labels = unpack_dataset(cifar_data_sets["train_data"])
     # Do some evaluation on the data
     #evaluate_data(data, labels)
 
-    model = HighDimMECCNN(preparer=transform)
+    #model = HighDimMECCNN(preparer=transform)
     # Train a model
-    train_model(model=model, cifar_data_loaders=cifar_data_loaders, num_epochs=10000, name="HighDimMECCNN")
+    #train_model(model=model, cifar_data_loaders=cifar_data_loaders, num_epochs=10000, name="HighDimMECCNN")
