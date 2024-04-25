@@ -8,21 +8,19 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from utils import (prepare_data_loaders, data_in_table,
                      get_information_per_column, get_mutual_information, unpack_dataset,
                      memory_equivalent_capacity_of_table)
-from model import OurCNN
+from model import OurCNN, MECCNN, HighDimMECCNN
 
-def train_model(cifar_data_loaders, transform, num_epochs=1, name="my_model"):
+def train_model(model: torch.nn.Module, cifar_data_loaders, num_epochs=1, name="my_model"):
     """
     Code for actually training a model
     """
-    # Create model
-    my_model = OurCNN(preparer=transform)
 
     # Logger and checkpoints saving
     logger = TensorBoardLogger("tb_logs", name=name)
     checkpoint_callback = ModelCheckpoint(
         monitor="val_loss_val_set/dataloader_idx_0",
         dirpath=f"checkpoints/{name}",
-        filename="my_model-{epoch:02d}-{train_loss:.2f}",
+        filename=name + "-{epoch:02d}-{train_loss:.2f}",
         save_top_k=3,  # Save the top 3 models
         mode="min",    # Save models with the minimum train_loss
     )
@@ -32,16 +30,16 @@ def train_model(cifar_data_loaders, transform, num_epochs=1, name="my_model"):
         max_epochs=num_epochs,
         logger=logger,
         callbacks=[checkpoint_callback],
-        log_every_n_steps=500,
+        log_every_n_steps=10,
     )
 
     # Train the model
-    trainer.fit(my_model, cifar_data_loaders["train_data"], [cifar_data_loaders["val_data"], cifar_data_loaders["val_train_data"]])
+    trainer.fit(model, cifar_data_loaders["train_data"], [cifar_data_loaders["val_data"], cifar_data_loaders["val_train_data"]])
 
     # Evaluate the model on the test set
-    trainer.test(my_model, cifar_data_loaders["test_data"])
+    trainer.test(model, cifar_data_loaders["test_data"])
 
-def evaluate_data(data, labels):
+def evaluate_data(data: torch.Tensor, labels: torch.Tensor):
     """
     Code for doing some evaluation on the data
     """
@@ -60,16 +58,22 @@ def evaluate_data(data, labels):
 
     # Calculate the mutual information between the labels and the data
     mutual_info = get_mutual_information(data, labels) * data.shape[0]
-    print(f"Minimum mutual information between labels and data: {mutual_info.min():.4f} bits")
+    mutual_info_max = mutual_info.max()
+    print(f"Minimum mutual information between labels and data: {mutual_info_max:.4f} bits")
+    print(f"Meaning we need to memorize {label_info - mutual_info_max:.4f} bits of information to predict the labels")
+
+    # Get mutual information of best guess towards others
+    return {"memory_equivalent_capacity": memory_equivalent_capacity}
     
 
 if __name__ == "__main__":
 
-    cifar_data_loaders, cifar_data_sets, transform = prepare_data_loaders()
+    cifar_data_loaders, cifar_data_sets, transform = prepare_data_loaders(batch_size=1024)
 
-    data, labels = unpack_dataset(cifar_data_sets["train_data"])
+    #data, labels = unpack_dataset(cifar_data_sets["train_data"])
     # Do some evaluation on the data
-    evaluate_data(data, labels)
+    #evaluate_data(data, labels)
 
+    model = HighDimMECCNN(preparer=transform)
     # Train a model
-    #train_model(cifar_data_loaders=cifar_data_loaders, transform=transform, num_epochs=10, name="my_model")
+    train_model(model=model, cifar_data_loaders=cifar_data_loaders, num_epochs=10000, name="HighDimMECCNN")
