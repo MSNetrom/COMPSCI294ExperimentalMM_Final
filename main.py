@@ -10,6 +10,9 @@ from utils import (prepare_data_loaders, data_in_table,
                      get_information_per_column, get_mutual_information, unpack_dataset,
                      memory_equivalent_capacity_of_table)
 from model import OurCNN, MECCNN, HighDimMECCNN, ChineseCNN
+from capacity_progress_models import DynamicCapacityCNN, DynamicCapacityCNN2
+
+torch.manual_seed(0)
 
 def train_model(model: torch.nn.Module, data_loaders, num_epochs=1, name="my_model"):
     """
@@ -65,6 +68,65 @@ def evaluate_data(data: torch.Tensor, labels: torch.Tensor):
 
     # Get mutual information of best guess towards others
     return {"memory_equivalent_capacity": memory_equivalent_capacity}
+
+def chinese_dynamic_train(data_loaders, preparer):
+
+    model = DynamicCapacityCNN2(num_blocks=3, preparer=preparer, end_block=torch.nn.Sequential(
+                            torch.nn.Conv2d(in_channels=32, out_channels=2, kernel_size=3, stride=1, padding=1),
+                            torch.nn.ReLU(),
+                            torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=0),          
+                            ))
+    
+    train_model(model, data_loaders=data_loaders, num_epochs=400, name=f"ExtraDynamicCapacityCNN")
+
+    with open(f"checkpoints/ExtraDynamicCapacityCNN/mec_info.txt", "w") as f:
+        f.write(f"MEC: {model.get_mec()}")
+
+
+def chinese_capacity_tester(data_loaders, preparer):
+
+    # Train for 20 000 steps?
+
+    # 32 channels
+    models = [
+        DynamicCapacityCNN(num_blocks=3, preparer=preparer, end_block=torch.nn.Sequential(
+                            torch.nn.Conv2d(in_channels=32, out_channels=16, kernel_size=3, stride=1, padding=2),
+                            torch.nn.ReLU(),
+                            torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=1),          
+                            )), # 144 input to linear layer
+        DynamicCapacityCNN(num_blocks=3, preparer=preparer, end_block=torch.nn.Sequential(
+                            torch.nn.Conv2d(in_channels=32, out_channels=27, kernel_size=3, stride=1, padding=2),
+                            torch.nn.ReLU(),
+                            torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=0),          
+                            )), # 108 input to linear layer
+        DynamicCapacityCNN(num_blocks=3, preparer=preparer, end_block=torch.nn.Sequential(
+                            torch.nn.Conv2d(in_channels=32, out_channels=18, kernel_size=3, stride=1, padding=2),
+                            torch.nn.ReLU(),
+                            torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=0),          
+                            )), # 72 input to linear layer
+        DynamicCapacityCNN(num_blocks=3, preparer=preparer, end_block=torch.nn.Sequential(
+                            torch.nn.Conv2d(in_channels=32, out_channels=36, kernel_size=3, stride=1, padding=1),
+                            torch.nn.ReLU(),
+                            torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=0),          
+                            )), # 36 input to linear layer
+        DynamicCapacityCNN(num_blocks=3, preparer=preparer, end_block=torch.nn.Sequential(
+                            torch.nn.Conv2d(in_channels=32, out_channels=4, kernel_size=3, stride=1, padding=1),
+                            torch.nn.ReLU(),
+                            torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=0),          
+                            )), # 4 input size
+        DynamicCapacityCNN(num_blocks=3, preparer=preparer, end_block=torch.nn.Sequential(
+                            torch.nn.Conv2d(in_channels=32, out_channels=2, kernel_size=3, stride=1, padding=1),
+                            torch.nn.ReLU(),
+                            torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=0),          
+                            )) # 2 input size, 2*2 = 4 > log_2(15)
+    ]
+
+    for i, m in enumerate(models):
+        print("Training model:", i, "MEC:", m.get_mec())
+        train_model(m, data_loaders=data_loaders, num_epochs=400, name=f"DynamicCapacityCNN_{i}")
+
+        with open(f"checkpoints/DynamicCapacityCNN_{i}/mec_info.txt", "w") as f:
+            f.write(f"MEC: {m.get_mec()}")
     
 
 if __name__ == "__main__":
@@ -74,9 +136,11 @@ if __name__ == "__main__":
 
     data_loaders, data_sets, transform = prepare_data_loaders(data, labels, train_perc=0.333, test_perc=0.333, batch_size=50, num_workers=4)
 
+    #chinese_dynamic_train(data_loaders, transform)
 
-    model = ChineseCNN(preparer=transform)
-    train_model(model=model, data_loaders=data_loaders, num_epochs=10000, name="ChineseCNN")
+
+    #model = ChineseCNN(preparer=transform)
+    #train_model(model=model, data_loaders=data_loaders, num_epochs=10000, name="ChineseCNN")
     #data, labels = unpack_dataset(cifar_data_sets["train_data"])
     # Do some evaluation on the data
     #evaluate_data(data, labels)

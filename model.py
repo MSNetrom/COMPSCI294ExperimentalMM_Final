@@ -232,3 +232,20 @@ class ChineseCNN(BaseCNN):
         x = self.conv_sequence(x)
 
         return self.full_connected_sequence(x.flatten(start_dim=1))
+    
+
+class ChineseCrazy(BaseCNN):
+
+    def __init__(self):
+
+        super().__init__()
+
+        self.seq = torch.nn.Sequential(
+            torch.nn.Conv2d(in_channels=1, out_channels=1, kernel_size=3, stride=2, padding=2),
+            torch.nn.ReLU(),
+            torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=2),
+            torch.nn.Conv2d(in_channels=1, out_channels=15, kernel_size=16, stride=1, padding=0),
+            torch.nn.ReLU(),
+            torch.nn.Linear(15, 15)
+        )
+                                     

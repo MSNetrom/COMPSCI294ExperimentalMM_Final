@@ -1,5 +1,8 @@
 # Dataset
 chinese_mnist/
+tb_logs/
+data/
+checkpoints/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
