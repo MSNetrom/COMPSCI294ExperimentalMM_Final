@@ -3,9 +3,21 @@ import torch
 from torchvision import datasets, transforms
 from torch.utils.data import Dataset, DataLoader, random_split
 from tqdm import tqdm
-import numpy as np
+import pandas as pd
 
 from typing import Tuple, Dict
+
+def load_titanic() -> Tuple[torch.Tensor, torch.Tensor]:
+
+    # Load the Titanic dataset
+    # train_and_test2.csv may have more rows in reality, but we are only loading/previewing the first 1000 rows
+    df1 = pd.read_csv('titanic_dataset.csv', delimiter=',')
+    df1.dataframeName = 'titanic_dataset.csv'
+
+    data = torch.Tensor(df1.values[:, :-1])
+    labels = torch.Tensor(df1.values[:, -1])
+
+    return data, labels
 
 def load_cifar10() -> Tuple[Dataset, Dataset]:
 
@@ -14,6 +26,14 @@ def load_cifar10() -> Tuple[Dataset, Dataset]:
     cifar_test_dataset = datasets.CIFAR10(root='./data', train=False, download=True, transform=transforms.PILToTensor())
 
     return cifar_train_dataset, cifar_test_dataset
+
+def load_mnist() -> Tuple[Dataset, Dataset]:
+
+    # Load the MNIST dataset
+    mnist_train_dataset = datasets.MNIST(root='./data', train=True, download=True, transform=transforms.ToTensor())
+    mnist_test_dataset = datasets.MNIST(root='./data', train=False, download=True, transform=transforms.ToTensor())
+
+    return mnist_train_dataset, mnist_test_dataset
 
 def prepare_data_loaders(data: torch.Tensor, labels: torch.Tensor, train_perc: int, test_perc: int, batch_size=50, num_workers=4) -> Tuple[Dict[str, DataLoader], Dict[str, Dataset], transforms.Normalize]:
 
@@ -105,4 +125,6 @@ def get_mutual_information(data: torch.Tensor, labels: torch.Tensor) -> torch.Te
     # Calculate the mutual information
     return information_per_feature + information_labels - information_joint
 
-    
+if __name__ == "__main__":
+    # Load titanic
+    pass

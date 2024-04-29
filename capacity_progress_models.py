@@ -53,7 +53,7 @@ class DynamicCapacityCNN(BaseCNN):
 
         print("Line in size:", line_in_size, "Mid size:", mid_size, "Out size:", 15)
 
-        self.mec = line_in_size*line_in_size + min(line_in_size, mid_size*line_in_size) + min(mid_size, 15*mid_size) 
+        self.mec = mid_size*line_in_size + min(mid_size, mid_size*15)  
 
     def get_mec(self):
         return self.mec
