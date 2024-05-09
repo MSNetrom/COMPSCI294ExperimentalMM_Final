@@ -1,18 +1,19 @@
 import torch
 import torch.utils
-import matplotlib.pyplot as plt
 
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
-import chinese_mnist_loader
+import utils.chinese_mnist_loader as chinese_mnist_loader
 
-from utils import (prepare_data_loaders, data_in_table,
+
+from utils.utils import (prepare_data_loaders, data_in_table,
                      get_information_per_column, get_mutual_information, unpack_dataset,
                      memory_equivalent_capacity_of_table, load_mnist)
-from model import OurCNN, MECCNN, HighDimMECCNN, ChineseCNN
-from capacity_progress_models import DynamicCapacityCNN, DynamicCapacityCNN2
-from optimal_cnn import OptimalCNN, OptimalCNN2, OptimalCNN3, OptimalCNN4
+
+from strategy1_networks import OptimalCNN
+from strategy2_networks import STRAT1_TEST_LIST
+from fully_connected_extra import FullyConnectedExtra
 
 torch.manual_seed(0)
 
@@ -45,7 +46,7 @@ def train_model(model: torch.nn.Module, data_loaders, num_epochs=1, name="my_mod
     # Evaluate the model on the test set
     trainer.test(model, data_loaders["test_data"])
 
-def evaluate_data(data: torch.Tensor, labels: torch.Tensor):
+def evaluate_data(data: torch.Tensor, labels: torch.Tensor, classes=15):
     """
     Code for doing some evaluation on the data
     """
@@ -55,7 +56,7 @@ def evaluate_data(data: torch.Tensor, labels: torch.Tensor):
     print(f"Amount of data in the dataset: {data_capacity} bits")
 
     # Memory Eqviavlent Capacity of table
-    memory_equivalent_capacity = memory_equivalent_capacity_of_table(labels, 10)
+    memory_equivalent_capacity = memory_equivalent_capacity_of_table(labels, classes)
     print(f"Memory Equivalent Capacity of table as lookup-table: {memory_equivalent_capacity} bits")
 
     # Calculate the maximum mutual information between the labels and the data
@@ -71,123 +72,55 @@ def evaluate_data(data: torch.Tensor, labels: torch.Tensor):
     # Get mutual information of best guess towards others
     return {"memory_equivalent_capacity": memory_equivalent_capacity}
 
-def chinese_dynamic_train(data_loaders, preparer):
+def evaluate_strategy_1(data_loaders, transform, namde_addon="", num_epochs=500):
 
-    model = DynamicCapacityCNN2(num_blocks=3, preparer=preparer, end_block=torch.nn.Sequential(
-                            torch.nn.Conv2d(in_channels=32, out_channels=2, kernel_size=3, stride=1, padding=1),
-                            torch.nn.ReLU(),
-                            torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=0),          
-                            ))
-    
-    train_model(model, data_loaders=data_loaders, num_epochs=400, name=f"ExtraDynamicCapacityCNN")
+    hidden_sizes = [4, 6, 9, 13, 19, 56, 222, 888, 3552]
+    hidden_sizes = reversed(hidden_sizes)
 
-    with open(f"checkpoints/ExtraDynamicCapacityCNN/mec_info.txt", "w") as f:
-        f.write(f"MEC: {model.get_mec()}")
+    for h in hidden_sizes:
+        model = OptimalCNN(hidden_size=h, preparer=transform)
+        train_model(model=model, data_loaders=data_loaders, num_epochs=num_epochs, name=f"Strat1_{h}{namde_addon}")
+
+        with open(f"tb_logs/Strat1_{h}{namde_addon}/mec_info.txt", "w") as f:
+            f.write(f"Hidden size: {h}\nMEC: {11*h}")
 
 
-def chinese_capacity_tester(data_loaders, preparer):
-
-    # Train for 20 000 steps?
-
-    # 32 channels
-    models = [
-        DynamicCapacityCNN(num_blocks=3, preparer=preparer, end_block=torch.nn.Sequential(
-                            torch.nn.Conv2d(in_channels=32, out_channels=16, kernel_size=3, stride=1, padding=2),
-                            torch.nn.ReLU(),
-                            torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=1),          
-                            )), # 144 input to linear layer
-        DynamicCapacityCNN(num_blocks=3, preparer=preparer, end_block=torch.nn.Sequential(
-                            torch.nn.Conv2d(in_channels=32, out_channels=27, kernel_size=3, stride=1, padding=2),
-                            torch.nn.ReLU(),
-                            torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=0),          
-                            )), # 108 input to linear layer
-        DynamicCapacityCNN(num_blocks=3, preparer=preparer, end_block=torch.nn.Sequential(
-                            torch.nn.Conv2d(in_channels=32, out_channels=18, kernel_size=3, stride=1, padding=2),
-                            torch.nn.ReLU(),
-                            torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=0),          
-                            )), # 72 input to linear layer
-        DynamicCapacityCNN(num_blocks=3, preparer=preparer, end_block=torch.nn.Sequential(
-                            torch.nn.Conv2d(in_channels=32, out_channels=36, kernel_size=3, stride=1, padding=1),
-                            torch.nn.ReLU(),
-                            torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=0),          
-                            )), # 36 input to linear layer
-        DynamicCapacityCNN(num_blocks=3, preparer=preparer, end_block=torch.nn.Sequential(
-                            torch.nn.Conv2d(in_channels=32, out_channels=4, kernel_size=3, stride=1, padding=1),
-                            torch.nn.ReLU(),
-                            torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=0),          
-                            )), # 4 input size
-        DynamicCapacityCNN(num_blocks=3, preparer=preparer, end_block=torch.nn.Sequential(
-                            torch.nn.Conv2d(in_channels=32, out_channels=2, kernel_size=3, stride=1, padding=1),
-                            torch.nn.ReLU(),
-                            torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=0),          
-                            )) # 2 input size, 2*2 = 4 > log_2(15)
-    ]
-
-    for i, m in enumerate(models):
-        print("Training model:", i, "MEC:", m.get_mec())
-        train_model(m, data_loaders=data_loaders, num_epochs=400, name=f"DynamicCapacityCNN_{i}")
-
-        with open(f"checkpoints/DynamicCapacityCNN_{i}/mec_info.txt", "w") as f:
-            f.write(f"MEC: {m.get_mec()}")
-
-def mutual_information_image(data, labels, name=None):
-
-    mutual_infomration = get_mutual_information(data.flatten(start_dim=1), labels).reshape(*data.shape[2:])
-
-    print("Mutual information:", mutual_infomration.shape)
-    plt.imshow(mutual_infomration, cmap='hot')
-    plt.title("Mutual information between pixels and labels")
-    cbar = plt.colorbar()
-    cbar.set_label('Average mutual Information in bits')
-    if name is not None:
-        plt.savefig(name, format="pdf")
-    plt.show()
-
-def mutual_information_comparer():
-
-    data, labels = chinese_mnist_loader.load_chinese_mnist()
-    data_loaders, data_sets, transform = prepare_data_loaders(data, labels, train_perc=0.333, test_perc=0.333, batch_size=50, num_workers=4)
-
-    data = torch.vstack([data for data, _ in data_sets["train_data"]]).unsqueeze(1)
-    labels = torch.Tensor([label for _, label in data_sets["train_data"]])
-
-    mutual_information_image(data, labels, name="chinese_mnist_mutual_information.pdf")
-
-    train_mnist_set, _ = load_mnist()
-    data_mnist = torch.vstack([data for data, _ in train_mnist_set]).unsqueeze(1)
-    labels_mnist = torch.Tensor([label for _, label in train_mnist_set])
-
-    #print("Data shape: ", data_mnist.shape, "Data dtype: ", data_mnist.dtype)
-    
-
-    mutual_information_image(data_mnist, labels_mnist)
-
-    random_data = torch.rand_like(data)*256
-    random_labels = torch.randint(0, 15, (data.shape[0],))
-
-    mutual_information_image(random_data, random_labels, name="random_mutual_information.pdf")
+def evaluate_strategy_2(data_loaders, transform, namde_addon="", num_epochs=500):
 
     
+    for model_class in STRAT1_TEST_LIST:
+        model = model_class(input_size=(1, 64, 64), preparer=transform)
+        train_model(model=model, data_loaders=data_loaders, num_epochs=num_epochs, name=f"Strat2_{model_class.__name__}{namde_addon}")
+
+def evaluate_fully_connected_extra(data_loaders, transform, num_epochs=500, namde_addon=""):
+    model = FullyConnectedExtra(preparer=transform)
+    train_model(model=model, data_loaders=data_loaders, num_epochs=num_epochs, name=f"FullyConnectedExtra{namde_addon}")
 
 if __name__ == "__main__":
 
-    #mutual_information_comparer()
-    
-    # Load the data
-    data, labels = chinese_mnist_loader.load_chinese_mnist()
-    data_loaders, data_sets, transform = prepare_data_loaders(data, labels, train_perc=2/3, test_perc=1/6, batch_size=50, num_workers=4)
+    chinese_data, chinese_labels = chinese_mnist_loader.load_chinese_mnist()
+    chinese_data_loaders, _, chinese_transform = prepare_data_loaders(chinese_data, chinese_labels, train_perc=2/3, test_perc=1/6, batch_size=50, num_workers=4)
 
-    model = OptimalCNN4(preparer=transform)
-
-    #chinese_dynamic_train(data_loaders, transform)
+    evaluate_strategy_1(chinese_data_loaders, chinese_transform, num_epochs=500, namde_addon="_Chinese")
+    evaluate_strategy_2(chinese_data_loaders, chinese_transform, num_epochs=500, namde_addon="_Chinese")
+    evaluate_fully_connected_extra(chinese_data_loaders, chinese_transform, num_epochs=500, namde_addon="_Chinese")
 
 
-    #model = ChineseCNN(preparer=transform)
-    train_model(model=model, data_loaders=data_loaders, num_epochs=10000, name="OptimalChineseCNN4")
-    #data, labels = unpack_dataset(cifar_data_sets["train_data"])
-    # Do some evaluation on the data
-    #evaluate_data(data, labels)
 
-    #model = HighDimMECCNN(preparer=transform)
-    # Train a model
-    #train_model(model=model, cifar_data_loaders=cifar_data_loaders, num_epochs=10000, name="HighDimMECCNN")
+    random_data, random_labels = torch.randint_like(chinese_data, 0, 256), torch.randint_like(chinese_labels, 0, 15)
+    random_data_loaders, _, random_transform = prepare_data_loaders(random_data, random_labels, train_perc=2/3, test_perc=1/6, batch_size=10000, num_workers=4)
+    random_transform = torch.nn.Identity()
+
+    evaluate_strategy_1(random_data_loaders, random_transform, num_epochs=500, namde_addon="_Random")
+    evaluate_strategy_2(random_data_loaders, random_transform, num_epochs=500, namde_addon="_Random")
+    evaluate_fully_connected_extra(random_data_loaders, random_transform, num_epochs=500, namde_addon="_Random")
+
+
+
+    random_data, random_labels = torch.randint_like(chinese_data, 0, 256), torch.randint_like(chinese_labels, 0, 15)
+    random_data_loaders, _, random_transform = prepare_data_loaders(random_data, random_labels, train_perc=2/3, test_perc=1/6, batch_size=50, num_workers=4)
+    random_transform = torch.nn.Identity()
+
+    evaluate_strategy_1(random_data_loaders, random_transform, num_epochs=500, namde_addon="_Random2")
+    evaluate_strategy_2(random_data_loaders, random_transform, num_epochs=500, namde_addon="_Random2")
+    evaluate_fully_connected_extra(random_data_loaders, random_transform, num_epochs=500, namde_addon="_Random2")

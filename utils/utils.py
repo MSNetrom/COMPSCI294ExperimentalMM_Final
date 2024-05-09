@@ -4,6 +4,7 @@ from torchvision import datasets, transforms
 from torch.utils.data import Dataset, DataLoader, random_split
 from tqdm import tqdm
 import pandas as pd
+from .chinese_mnist_loader import load_chinese_mnist
 
 from typing import Tuple, Dict
 
@@ -124,6 +125,43 @@ def get_mutual_information(data: torch.Tensor, labels: torch.Tensor) -> torch.Te
 
     # Calculate the mutual information
     return information_per_feature + information_labels - information_joint
+
+def mutual_information_image(data, labels, name=None):
+
+    mutual_infomration = get_mutual_information(data.flatten(start_dim=1), labels).reshape(*data.shape[2:])
+
+    print("Mutual information:", mutual_infomration.shape)
+    plt.imshow(mutual_infomration, cmap='hot')
+    plt.title("Mutual information between pixels and labels")
+    cbar = plt.colorbar()
+    cbar.set_label('Average mutual Information in bits')
+    if name is not None:
+        plt.savefig(name, format="pdf")
+    plt.show()
+
+def mutual_information_comparer():
+
+    data, labels = chinese_mnist_loader.load_chinese_mnist()
+    data_loaders, data_sets, transform = prepare_data_loaders(data, labels, train_perc=0.333, test_perc=0.333, batch_size=50, num_workers=4)
+
+    data = torch.vstack([data for data, _ in data_sets["train_data"]]).unsqueeze(1)
+    labels = torch.Tensor([label for _, label in data_sets["train_data"]])
+
+    mutual_information_image(data, labels, name="chinese_mnist_mutual_information.pdf")
+
+    train_mnist_set, _ = load_mnist()
+    data_mnist = torch.vstack([data for data, _ in train_mnist_set]).unsqueeze(1)
+    labels_mnist = torch.Tensor([label for _, label in train_mnist_set])
+
+    #print("Data shape: ", data_mnist.shape, "Data dtype: ", data_mnist.dtype)
+    
+
+    mutual_information_image(data_mnist, labels_mnist)
+
+    random_data = torch.rand_like(data)*256
+    random_labels = torch.randint(0, 15, (data.shape[0],))
+
+    mutual_information_image(random_data, random_labels, name="random_mutual_information.pdf")
 
 if __name__ == "__main__":
     # Load titanic

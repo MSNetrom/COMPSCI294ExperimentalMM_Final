@@ -1,4 +1,4 @@
-from model import BaseCNN
+from old_files.model import BaseCNN
 import torch
 
 class StandardCNNBlock(torch.nn.Module):

@@ -51,7 +51,7 @@ if __name__ == "__main__":
     plt.show()
 
     # MEC as function of k, and fixed m=5
-    m=6
+    m=9
     #k = np.linspace(0, 20, 20)
     #mec = k*(m+1) + k
     mec = np.linspace(0, 160, 160)
