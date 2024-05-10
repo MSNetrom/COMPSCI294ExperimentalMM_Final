@@ -5,13 +5,14 @@ import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 import utils.chinese_mnist_loader as chinese_mnist_loader
+from utils.cnn_size_calcs import full_cnn_seq_size
 
 
 from utils.utils import (prepare_data_loaders, data_in_table,
                      get_information_per_column, get_mutual_information, unpack_dataset,
                      memory_equivalent_capacity_of_table, load_mnist)
 
-from strategy1_networks import OptimalCNN
+from strategy1_networks import OptimalCNN, HIDDEN_SIZES
 from strategy2_networks import STRAT1_TEST_LIST
 from fully_connected_extra import FullyConnectedExtra
 
@@ -74,8 +75,8 @@ def evaluate_data(data: torch.Tensor, labels: torch.Tensor, classes=15):
 
 def evaluate_strategy_1(data_loaders, transform, namde_addon="", num_epochs=500):
 
-    hidden_sizes = [4, 6, 9, 13, 19, 56, 222, 888, 3552]
-    hidden_sizes = reversed(hidden_sizes)
+    #hidden_sizes = [4, 6, 9, 13, 19, 56, 222, 888, 3552]
+    hidden_sizes = reversed(HIDDEN_SIZES)
 
     for h in hidden_sizes:
         model = OptimalCNN(hidden_size=h, preparer=transform)
@@ -101,9 +102,13 @@ if __name__ == "__main__":
     chinese_data, chinese_labels = chinese_mnist_loader.load_chinese_mnist()
     chinese_data_loaders, _, chinese_transform = prepare_data_loaders(chinese_data, chinese_labels, train_perc=2/3, test_perc=1/6, batch_size=50, num_workers=4)
 
-    #evaluate_strategy_1(chinese_data_loaders, chinese_transform, num_epochs=500, namde_addon="_Chinese")
+    #model = OptimalCNN(hidden_size=9)
+
+    #print(full_cnn_seq_size(model.conv_sequence, (1, 64, 64)))
+
+    evaluate_strategy_1(chinese_data_loaders, chinese_transform, num_epochs=500, namde_addon="_Chinese")
     #evaluate_strategy_2(chinese_data_loaders, chinese_transform, num_epochs=500, namde_addon="_Chinese")
-    evaluate_fully_connected_extra(chinese_data_loaders, chinese_transform, num_epochs=500, namde_addon="_Chinese")
+    #evaluate_fully_connected_extra(chinese_data_loaders, chinese_transform, num_epochs=500, namde_addon="_Chinese")
 
 
 
