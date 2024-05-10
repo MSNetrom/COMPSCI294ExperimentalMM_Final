@@ -10,6 +10,10 @@ class FullyConnectedExtra(BaseCNN):
 
         self.fully_connected_sequence = torch.nn.Sequential(torch.nn.Linear(4096, 10),
                                                            torch.nn.ReLU(),
+                                                           torch.nn.Linear(10, 10),
+                                                           torch.nn.ReLU(),
+                                                           torch.nn.Linear(10, 10),
+                                                           torch.nn.ReLU(),
                                                            torch.nn.Linear(10, 15))
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
