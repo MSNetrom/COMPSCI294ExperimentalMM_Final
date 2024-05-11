@@ -102,30 +102,6 @@ if __name__ == "__main__":
     chinese_data, chinese_labels = chinese_mnist_loader.load_chinese_mnist()
     chinese_data_loaders, _, chinese_transform = prepare_data_loaders(chinese_data, chinese_labels, train_perc=2/3, test_perc=1/6, batch_size=50, num_workers=4)
 
-    #model = OptimalCNN(hidden_size=9)
-
-    #print(full_cnn_seq_size(model.conv_sequence, (1, 64, 64)))
-
     evaluate_strategy_1(chinese_data_loaders, chinese_transform, num_epochs=500, namde_addon="_Chinese")
-    #evaluate_strategy_2(chinese_data_loaders, chinese_transform, num_epochs=500, namde_addon="_Chinese")
-    #evaluate_fully_connected_extra(chinese_data_loaders, chinese_transform, num_epochs=500, namde_addon="_Chinese")
-
-
-
-    """random_data, random_labels = torch.randint_like(chinese_data, 0, 256), torch.randint_like(chinese_labels, 0, 15)
-    random_data_loaders, _, random_transform = prepare_data_loaders(random_data, random_labels, train_perc=2/3, test_perc=1/6, batch_size=10000, num_workers=4)
-    random_transform = torch.nn.Identity()
-
-    evaluate_strategy_1(random_data_loaders, random_transform, num_epochs=500, namde_addon="_Random")
-    evaluate_strategy_2(random_data_loaders, random_transform, num_epochs=500, namde_addon="_Random")
-    evaluate_fully_connected_extra(random_data_loaders, random_transform, num_epochs=500, namde_addon="_Random")
-
-
-
-    random_data, random_labels = torch.randint_like(chinese_data, 0, 256), torch.randint_like(chinese_labels, 0, 15)
-    random_data_loaders, _, random_transform = prepare_data_loaders(random_data, random_labels, train_perc=2/3, test_perc=1/6, batch_size=50, num_workers=4)
-    random_transform = torch.nn.Identity()
-
-    evaluate_strategy_1(random_data_loaders, random_transform, num_epochs=500, namde_addon="_Random2")
-    evaluate_strategy_2(random_data_loaders, random_transform, num_epochs=500, namde_addon="_Random2")
-    evaluate_fully_connected_extra(random_data_loaders, random_transform, num_epochs=500, namde_addon="_Random2")"""
+    evaluate_strategy_2(chinese_data_loaders, chinese_transform, num_epochs=500, namde_addon="_Chinese")
+    evaluate_fully_connected_extra(chinese_data_loaders, chinese_transform, num_epochs=500, namde_addon="_Chinese")
