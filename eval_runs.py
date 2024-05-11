@@ -116,8 +116,6 @@ if __name__ == "__main__":
     strat1_summary_list = read_strategy1()
     strat2_summary_list = read_strategy2()
 
-    input()
-
     #print(strat1_summary_list[0][-1].list_metrics())
 
     strat1_mec_vals, strat1_train_accs, strat1_val_accs, strat1_mec_estout, strat1_params = get_acc_vs_mec(strat1_summary_list)
