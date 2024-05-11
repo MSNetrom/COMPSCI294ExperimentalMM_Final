@@ -10,7 +10,13 @@ def load_chinese_mnist(base_path: Path = Path("chinese_mnist")):
     csv = pd.read_csv(base_path / 'chinese_mnist.csv')
     filename = csv[['suite_id', 'sample_id', 'code']].values
 
-    images = [ Image.open(base_path / f"data/data/input_{suite_id}_{sample_id}_{code}.jpg") for suite_id, sample_id, code in filename ]
+    images = []
+
+    for suite_id, sample_id, code in filename:
+        image = Image.open(base_path / f"data/data/input_{suite_id}_{sample_id}_{code}.jpg")
+        images.append(image.copy())
+        image.close()
+    #images = [ Image.open(base_path / f"data/data/input_{suite_id}_{sample_id}_{code}.jpg").close() for suite_id, sample_id, code in filename ]
     labels = [ [x - 1] for x in csv['code'].values ] # need to compensate to 0-15
 
     image_transform = transforms.PILToTensor()
@@ -22,3 +28,4 @@ def load_chinese_mnist(base_path: Path = Path("chinese_mnist")):
     return images, labels
 #print("Images shape: ", images.shape, "Images dtype: ", images.dtype)
 #print("Labels shape: ", labels.shape, "Labels dtype: ", labels.dtype)
+

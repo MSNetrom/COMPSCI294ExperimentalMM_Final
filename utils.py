@@ -3,6 +3,8 @@ import torch
 from torchvision import datasets, transforms
 from torch.utils.data import Dataset, DataLoader, random_split
 from tqdm import tqdm
+from torch.utils.tensorboard import SummaryWriter
+from torchvision import models
 import numpy as np
 
 from typing import Tuple, Dict
@@ -105,4 +107,10 @@ def get_mutual_information(data: torch.Tensor, labels: torch.Tensor) -> torch.Te
     # Calculate the mutual information
     return information_per_feature + information_labels - information_joint
 
-    
+def visualize_model(visualization_path, model_path, sample):
+    writer = SummaryWriter(visualization_path)
+    model =     
+
+    writer.add_graph(model, sample)
+
+    #tensorboard --logdir = %visualization_path%
