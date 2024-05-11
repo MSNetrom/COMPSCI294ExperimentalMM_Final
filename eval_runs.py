@@ -35,7 +35,7 @@ def read_strategy1(name_addon="_Chinese") -> List[Tuple[int, int, MySummaryReade
 
         temp_model = OptimalCNN(hidden_size=h)
 
-        print("Strategy 1 param count:", temp_model.get_param_count())
+        print("Strategy 1 param count:", temp_model.get_param_count(), "MEC:", 11*h)
 
         result_list.append((11*h, temp_model.get_param_count(), my_reader))
 
@@ -53,7 +53,7 @@ def read_strategy2(name_addon="_Chinese") -> List[Tuple[int, int, MySummaryReade
 
         temp_model = model_class(input_size=(1, 64, 64))
 
-        print("Strategy 2 param count:", temp_model.get_param_count())
+        print("Strategy 2 param count:", temp_model.get_param_count(), "MEC:", temp_model.get_mec(), "CNN-OUT Size:", temp_model.cnn_out_size[0] * temp_model.cnn_out_size[1] * temp_model.cnn_out_size[2])
 
         result_list.append((temp_model.get_mec(), temp_model.get_param_count(), my_reader))
 
@@ -116,9 +116,9 @@ if __name__ == "__main__":
     strat1_summary_list = read_strategy1()
     strat2_summary_list = read_strategy2()
 
-    #print(strat1_summary_list[0][-1].list_metrics())
+    input()
 
-    #input()
+    #print(strat1_summary_list[0][-1].list_metrics())
 
     strat1_mec_vals, strat1_train_accs, strat1_val_accs, strat1_mec_estout, strat1_params = get_acc_vs_mec(strat1_summary_list)
     strat2_mec_vals, strat2_train_accs, strat2_val_accs, strat2_mec_estout, strat2_params = get_acc_vs_mec(strat2_summary_list)
@@ -207,6 +207,7 @@ if __name__ == "__main__":
     # Plot MEC output of CNN
     plt.plot(strat1_mec_vals, np.log2(classes) * strat1_mec_estout, label="Strategy 1 CNN-OUT MEC Estimate", marker='x', linestyle='-')
     plt.plot(strat2_mec_vals, np.log2(classes) * strat2_mec_estout, label="Strategy 2 CNN-OUT MEC Estimate", marker='x', linestyle='-')
+    plt.plot([0, 40000], [51.149, 51.149], label="Estimated MEC needed for original data", linestyle='--')
     plt.xlabel("MEC of Architecture")
     plt.ylabel("CNN-OUT MEC Estimate")
     plt.title("MEC Estimate of CNN-OUT vs MEC of Architecture")
@@ -216,4 +217,19 @@ if __name__ == "__main__":
     plt.show()
 
 
-    
+    # Look closer at 1 model
+    strat2_higher2 = Path("tb_logs") / f"Strat2_CNNHigher2_Chinese"
+    strat2_higher2_reader = MySummaryReader(strat2_higher2)
+
+    step_t, train_loss = strat2_higher2_reader.get_metric("val_loss_full_training/dataloader_idx_1")
+    step_v, val_loss = strat2_higher2_reader.get_metric("val_loss_val_set/dataloader_idx_0")
+
+    plt.plot(step_t, train_loss, label="Train Loss")
+    plt.plot(step_v, val_loss, label="Validation Loss")
+    plt.xlabel("Step")
+    plt.ylabel("Loss")
+    plt.title("Loss vs Epoch, Strategy 2 MEC=423 bits")
+    plt.legend()
+    plt.grid()
+    plt.savefig("figures/loss_vs_epoch_423bits.pdf", format="pdf")
+    plt.show()

@@ -1,8 +1,6 @@
 # COMPSCI294ExperimentalMM_Final
 
-I choose to use **Lightning** to make implementation easier and more readable. 
-
-This code splits train data into train and validation data. It then trains a simple CNN model on the training data and validates during training. It not only validates on the validation data, but also the whole training data set every epoch. At the end of training, it tests the model on the test data.
+I choose to use **Lightning** to make implementation easier and more readable.
 All of this is logged to tensorboard. Best models are saved to disk, measured by the validation loss (from normal validation set).
 
 ## Setup
@@ -17,17 +15,22 @@ To train the model, run:
 
 ```python3 main.py```
 
+Edit main.py to fit your use.
+
+## Base model
+
+Base model is found in ```base_cnn.py```. This model could be inherited from for constructing other designs.
+
 ## Tensorboard
 
 To visualize the training process, run:
 
 ```tensorboard --logdir=tb_logs/my_model/version_<version_number>```
 
-## Edit model
+## Evaluation
 
-I have tried to make some good code for us to start with. It might be overwhleming at first, but I think it will be helpful in the long run.
-Really everything needed to actually change the architecture of the model is to edit or make something similar to ```OurCNN``` in ```model.py```.
-```OurCNN``` is a simple CNN model that I made to get us started.
+Some predictions about the design can be found by running ```design_finder.py``` and ```calcs.ipynb```. 
+Evaluation of trained models can be done by running ```eval_runs.py```.
 
 -------------------
 

@@ -25,13 +25,13 @@ if __name__ == "__main__":
     plt.plot(alpha, m_vals, label="Input-layer")
     plt.plot(alpha, k_vals, label="Hidden-layer")
     plt.plot(alpha, classes*np.ones_like(alpha), label="Out-layer")
-    plt.plot(alpha, np.log2(classes)*np.ones_like(alpha), label=f"Log_2({classes})")
+    #plt.plot(alpha, np.log2(classes)*np.ones_like(alpha), label=f"Log_2({classes})")
     plt.title("3-layer MLP parametriced by alpha, MEC=51.149 bits")
     plt.xlabel("Alpha")
     plt.ylabel("Layer-nodes")
     plt.legend()
     plt.grid()
-    plt.savefig("mlp_capacity_parametriced_by_alpha.pdf", format="pdf")
+    plt.savefig("figures/mlp_capacity_parametriced_by_alpha.pdf", format="pdf")
     plt.show()
 
     # Get m and k
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     plt.ylabel("Layer-nodes")
     plt.legend()
     plt.grid()
-    plt.savefig("mlp_capacity_parametriced_by_mec.pdf", format="pdf")
+    plt.savefig("figures/mlp_capacity_parametriced_by_mec.pdf", format="pdf")
     plt.show()
 
     # MEC as function of k, and fixed m=5
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     plt.xlabel("Hidden nodes")
     plt.ylabel("MEC")
     plt.grid()
-    plt.savefig("mec_as_function_of_k.pdf", format="pdf")
+    plt.savefig("figures/mec_as_function_of_k.pdf", format="pdf")
     plt.show()
 
 
