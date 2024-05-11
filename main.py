@@ -5,6 +5,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 import chinese_mnist_loader
+from torch.utils.tensorboard import SummaryWriter
 
 from utils import (prepare_data_loaders, data_in_table,
                      get_information_per_column, get_mutual_information, unpack_dataset,
@@ -68,16 +69,18 @@ def evaluate_data(data: torch.Tensor, labels: torch.Tensor):
     
 
 if __name__ == "__main__":
-
     # Load the data
     data, labels = chinese_mnist_loader.load_chinese_mnist()
+    writer = SummaryWriter()
+    dummy_input = data[0].unsqueeze(0)
+    dummy_input = dummy_input.to(torch.float32)
 
     data_loaders, data_sets, transform = prepare_data_loaders(data, labels, train_perc=0.333, test_perc=0.333, batch_size=50, num_workers=4)
 
 
     model = ChineseCNN(preparer=transform)
-    #train_model(model=model, data_loaders=data_loaders, num_epochs=1, name="ChineseCNN")
-    torch.save(model.state_dict(), './saved_model.pt')
+    train_model(model=model, data_loaders=data_loaders, num_epochs=1, name="ChineseCNN")
+    writer.add_graph(model, dummy_input)
 
     #data, labels = unpack_dataset(cifar_data_sets["train_data"])
     # Do some evaluation on the data
