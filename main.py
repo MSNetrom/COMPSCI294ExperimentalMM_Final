@@ -76,8 +76,8 @@ if __name__ == "__main__":
 
 
     model = ChineseCNN(preparer=transform)
-    train_model(model=model, data_loaders=data_loaders, num_epochs=1, name="ChineseCNN")
-    torch.save(model.state_dic  t(), './saved_model')
+    #train_model(model=model, data_loaders=data_loaders, num_epochs=1, name="ChineseCNN")
+    torch.save(model.state_dict(), './saved_model.pt')
 
     #data, labels = unpack_dataset(cifar_data_sets["train_data"])
     # Do some evaluation on the data
